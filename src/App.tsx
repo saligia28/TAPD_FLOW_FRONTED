@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import ActionCard, { type ActionState } from './components/ActionCard';
+import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
 import StoryPanel, { type OwnerOption } from './components/StoryPanel';
 import { createJob, fetchActions, fetchJob, fetchStories } from './api/client';
@@ -17,6 +18,7 @@ const App = () => {
   const [actions, setActions] = useState<ActionMeta[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, ActionState>>({});
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const [optionSelections, setOptionSelections] = useState<Record<string, string[]>>({});
   const [loadingActions, setLoadingActions] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -42,6 +44,23 @@ const App = () => {
       try {
         const data = await fetchActions(controller.signal);
         setActions(data);
+        setOptionSelections((prev) => {
+          const next: Record<string, string[]> = {};
+          data.forEach((action) => {
+            const optionIds = new Set(action.options.map((option) => option.id));
+            const hadPrevious = Object.prototype.hasOwnProperty.call(prev, action.id);
+            const previous = hadPrevious ? prev[action.id] ?? [] : [];
+            const filtered = previous.filter((id) => optionIds.has(id));
+            if (hadPrevious) {
+              next[action.id] = filtered;
+            } else {
+              next[action.id] = action.options
+                .filter((option) => option.defaultSelected)
+                .map((option) => option.id);
+            }
+          });
+          return next;
+        });
         setStatusMap(
           data.reduce<Record<string, ActionState>>((acc, action) => {
             acc[action.id] = 'idle';
@@ -132,13 +151,26 @@ const App = () => {
     setSelectedOwners(ownerOptions.map((option) => option.name));
   };
 
+  const handleSelectAction = (action: ActionMeta) => {
+    setSelectedAction(action.id);
+  };
+
+  const toggleActionOption = (actionId: string, optionId: string) => {
+    setOptionSelections((prev) => {
+      const current = prev[actionId] ?? [];
+      const exists = current.includes(optionId);
+      const next = exists ? current.filter((item) => item !== optionId) : [...current, optionId];
+      return { ...prev, [actionId]: next };
+    });
+  };
+
   const resetStatusLater = (actionId: string) => {
     window.setTimeout(() => {
       setStatusMap((prev) => ({ ...prev, [actionId]: 'idle' }));
     }, 1600);
   };
 
-  const handleTrigger = async (action: ActionMeta) => {
+  const handleExecute = async (action: ActionMeta) => {
     if (busy) return;
 
     setSelectedAction(action.id);
@@ -149,9 +181,15 @@ const App = () => {
 
     setStatusMap((prev) => ({ ...prev, [action.id]: 'running' }));
 
+    const selectedOptionIds = new Set(optionSelections[action.id] ?? []);
+    const optionArgs = action.options
+      .filter((option) => selectedOptionIds.has(option.id))
+      .flatMap((option) => option.args);
+    const ownerArgs = selectedOwners.length > 0 ? ['--owner', selectedOwners.join(',')] : [];
+    const baseArgs = [...action.defaultArgs, ...optionArgs, ...ownerArgs];
+
     try {
-      const ownerArgs = selectedOwners.length > 0 ? ['--owner', selectedOwners.join(',')] : [];
-      const response = await createJob(action.id, ownerArgs);
+      const response = await createJob(action.id, { args: baseArgs });
       const { logs: initialLogs, nextCursor, ...meta } = response;
       setJob(meta);
       setLogs(initialLogs);
@@ -229,6 +267,13 @@ const App = () => {
     };
   }, [job?.id, job?.status]);
 
+  const selectedActionMeta = useMemo(
+    () => actions.find((item) => item.id === selectedAction) ?? null,
+    [actions, selectedAction],
+  );
+
+  const selectedOptionIds = selectedActionMeta ? optionSelections[selectedActionMeta.id] ?? [] : [];
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 px-4 sm:px-6 py-10 lg:py-14">
       <div className="w-full flex flex-col gap-8 lg:gap-10">
@@ -255,7 +300,7 @@ const App = () => {
                 日常流程，一键到位
               </h1>
               <p className="text-sm text-panel-subtle leading-relaxed max-w-xl clamp-3">
-                选定下方操作即可触发脚本，右侧实时展示执行日志与状态。
+                选定下方操作后可先配置参数，再执行脚本；右侧实时展示执行日志与状态。
               </p>
             </header>
 
@@ -279,13 +324,23 @@ const App = () => {
                         action={action}
                         state={statusMap[action.id] ?? 'idle'}
                         busy={busy}
-                        onTrigger={handleTrigger}
+                        onSelect={handleSelectAction}
                         selected={selectedAction === action.id}
                       />
                     ))}
                   </div>
                 )}
               </div>
+
+              {selectedActionMeta ? (
+                <ActionOptionsPanel
+                  action={selectedActionMeta}
+                  selectedOptionIds={selectedOptionIds}
+                  onToggleOption={(optionId) => toggleActionOption(selectedActionMeta.id, optionId)}
+                  onExecute={() => handleExecute(selectedActionMeta)}
+                  busy={busy}
+                />
+              ) : null}
 
               <CommandConsole job={job} logs={logs} error={jobError} />
 

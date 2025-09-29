@@ -1,5 +1,13 @@
 export type JobStatus = 'pending' | 'running' | 'success' | 'error';
 
+export type ActionOptionMeta = {
+  id: string;
+  label: string;
+  args: string[];
+  description: string;
+  defaultSelected: boolean;
+};
+
 export type ActionMeta = {
   id: string;
   title: string;
@@ -7,6 +15,7 @@ export type ActionMeta = {
   hint?: string | null;
   defaultArgs: string[];
   commandPreview: string;
+  options: ActionOptionMeta[];
 };
 
 export type JobLogEntry = {

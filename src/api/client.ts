@@ -27,10 +27,25 @@ export async function fetchActions(signal?: AbortSignal): Promise<ActionMeta[]> 
   return request<ActionMeta[]>('/api/actions', { method: 'GET', signal });
 }
 
-export async function createJob(actionId: string, extraArgs: string[] = []): Promise<JobPollResponse> {
+type CreateJobOptions = {
+  args?: string[];
+  extraArgs?: string[];
+};
+
+export async function createJob(actionId: string, options: CreateJobOptions = {}): Promise<JobPollResponse> {
+  const payload: Record<string, unknown> = { actionId };
+
+  if (options.args !== undefined) {
+    payload.args = options.args;
+  }
+
+  if (options.extraArgs !== undefined) {
+    payload.extraArgs = options.extraArgs;
+  }
+
   return request<JobPollResponse>('/api/jobs', {
     method: 'POST',
-    body: JSON.stringify({ actionId, extraArgs }),
+    body: JSON.stringify(payload),
   });
 }
 
