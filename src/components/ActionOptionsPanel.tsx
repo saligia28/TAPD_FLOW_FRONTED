@@ -8,6 +8,8 @@ type Props = {
   onToggleOption: (optionId: string) => void;
   onExecute: () => void;
   busy: boolean;
+  executeDisabled: boolean;
+  disabledMessage?: string | null;
 };
 
 const ActionOptionsPanel: FC<Props> = ({
@@ -16,6 +18,8 @@ const ActionOptionsPanel: FC<Props> = ({
   onToggleOption,
   onExecute,
   busy,
+  executeDisabled,
+  disabledMessage = null,
 }) => {
   const selectedSet = useMemo(() => new Set(selectedOptionIds), [selectedOptionIds]);
   const hasOptions = action.options.length > 0;
@@ -67,14 +71,19 @@ const ActionOptionsPanel: FC<Props> = ({
         <button
           type="button"
           onClick={onExecute}
-          disabled={busy}
+          disabled={busy || executeDisabled}
           className={`pixel-button rounded-full px-5 py-2 text-sm font-semibold ${
-            busy ? 'bg-white/20 text-panel-subtle cursor-not-allowed' : 'bg-white/80 text-neutral-900 hover:bg-white'
+            busy || executeDisabled
+              ? 'bg-white/20 text-panel-subtle cursor-not-allowed'
+              : 'bg-white/80 text-neutral-900 hover:bg-white'
           }`}
         >
           {busy ? '执行中…' : '执行命令'}
         </button>
       </div>
+      {executeDisabled && !busy && disabledMessage ? (
+        <p className="text-xs text-panel-subtle/70">{disabledMessage}</p>
+      ) : null}
     </div>
   );
 };

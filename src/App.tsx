@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ActionCard, { type ActionState } from './components/ActionCard';
 import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
-import StoryPanel, { type OwnerOption } from './components/StoryPanel';
-import { createJob, fetchActions, fetchJob, fetchStories } from './api/client';
+import StoryPanel, { type OwnerOption, type QuickOwnerOption } from './components/StoryPanel';
+import { createJob, fetchActions, fetchJob, fetchStories, terminateJob } from './api/client';
 import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StorySummary } from './types';
 
 const jobStatusToActionState = (status: JobStatus): ActionState => {
@@ -13,6 +13,8 @@ const jobStatusToActionState = (status: JobStatus): ActionState => {
   if (status === 'pending' || status === 'running') return 'running';
   return 'idle';
 };
+
+const QUICK_OWNER_SHORTCUTS = ['江林', '喻童', '王荣祥'] as const;
 
 const App = () => {
   const [actions, setActions] = useState<ActionMeta[]>([]);
@@ -26,6 +28,7 @@ const App = () => {
   const [logs, setLogs] = useState<JobLogEntry[]>([]);
   const [cursor, setCursor] = useState(0);
   const [jobError, setJobError] = useState<string | null>(null);
+  const [terminating, setTerminating] = useState(false);
 
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
@@ -102,6 +105,17 @@ const App = () => {
     [job],
   );
 
+  const canTerminate = useMemo(() => {
+    if (!job) return false;
+    if (terminating) return false;
+    if (job.cancelRequested) return false;
+    return job.status === 'pending' || job.status === 'running';
+  }, [job, terminating]);
+
+  const terminatePending = terminating || Boolean(job?.cancelRequested);
+
+  const hasSelectedOwners = selectedOwners.length > 0;
+
   const ownerOptions = useMemo<OwnerOption[]>(() => {
     const counts = new Map<string, number>();
     stories.forEach((story) => {
@@ -120,6 +134,14 @@ const App = () => {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh-CN'));
   }, [stories]);
 
+  const quickOwnerMatches = useMemo(() => {
+    const ownerNames = ownerOptions.map((option) => option.name);
+    return QUICK_OWNER_SHORTCUTS.reduce<Record<string, string[]>>((acc, quick) => {
+      acc[quick] = ownerNames.filter((name) => name.includes(quick));
+      return acc;
+    }, {});
+  }, [ownerOptions]);
+
   useEffect(() => {
     setSelectedOwners((prev) => prev.filter((owner) => ownerOptions.some((option) => option.name === owner)));
   }, [ownerOptions]);
@@ -130,16 +152,71 @@ const App = () => {
     if (!selectedOwnerSet) return stories;
 
     return stories.filter((story) => {
-      const owners = story.owners.length > 0 ? story.owners : ['未指派'];
+      const owners =
+        story.owners.length > 0
+          ? story.owners
+              .map((owner) => owner.trim())
+              .filter((owner) => owner.length > 0)
+          : ['未指派'];
       return owners.some((owner) => selectedOwnerSet.has(owner));
     });
   }, [stories, selectedOwners]);
+
+  const hasSelectableStories = hasSelectedOwners && filteredStories.length > 0;
+  const executeDisabledMessage = useMemo(() => {
+    if (!hasSelectedOwners) {
+      return '请选择需要处理的需求负责人后再执行命令。';
+    }
+    if (filteredStories.length === 0) {
+      return '当前筛选没有需求命中，无法执行命令。';
+    }
+    return null;
+  }, [hasSelectedOwners, filteredStories.length]);
+
+  const quickOwnerOptions = useMemo<QuickOwnerOption[]>(() => {
+    const selectedSet = new Set(selectedOwners);
+    return QUICK_OWNER_SHORTCUTS.map((quick) => {
+      const total = stories.reduce((count, story) => {
+        const normalizedOwners = story.owners.map((owner) => owner.trim()).filter(Boolean);
+        return normalizedOwners.some((owner) => owner.includes(quick)) ? count + 1 : count;
+      }, 0);
+      const matches = quickOwnerMatches[quick] ?? [];
+      const active = matches.length > 0 ? matches.every((name) => selectedSet.has(name)) : false;
+      const selectedCount = filteredStories.reduce((count, story) => {
+        const normalizedOwners = story.owners.map((owner) => owner.trim()).filter(Boolean);
+        return normalizedOwners.some((owner) => owner.includes(quick)) ? count + 1 : count;
+      }, 0);
+      return {
+        name: quick,
+        count: total,
+        active,
+        selectedCount,
+      };
+    });
+  }, [stories, filteredStories, quickOwnerMatches, selectedOwners]);
 
   const toggleOwner = (owner: string) => {
     setSelectedOwners((prev) => {
       const exists = prev.includes(owner);
       if (exists) return prev.filter((item) => item !== owner);
       return [...prev, owner];
+    });
+  };
+
+  const toggleQuickOwner = (quickName: string) => {
+    const matches = quickOwnerMatches[quickName] ?? [];
+    if (matches.length === 0) {
+      return;
+    }
+    setSelectedOwners((prev) => {
+      const prevSet = new Set(prev);
+      const allSelected = matches.every((name) => prevSet.has(name));
+      if (allSelected) {
+        return prev.filter((name) => !matches.includes(name));
+      }
+      const nextSet = new Set(prev);
+      matches.forEach((name) => nextSet.add(name));
+      return Array.from(nextSet);
     });
   };
 
@@ -172,17 +249,19 @@ const App = () => {
 
   const handleExecute = async (action: ActionMeta) => {
     if (busy) return;
+    if (!hasSelectableStories) return;
 
     setSelectedAction(action.id);
     setJobError(null);
     setLogs([]);
     setCursor(0);
     cursorRef.current = 0;
+    setTerminating(false);
 
     setStatusMap((prev) => ({ ...prev, [action.id]: 'running' }));
 
     const selectedOptionIds = new Set(optionSelections[action.id] ?? []);
-    const optionArgs = action.options
+      const optionArgs = action.options
       .filter((option) => selectedOptionIds.has(option.id))
       .flatMap((option) => option.args);
     const ownerArgs = selectedOwners.length > 0 ? ['--owner', selectedOwners.join(',')] : [];
@@ -203,6 +282,31 @@ const App = () => {
     }
   };
 
+  const handleTerminate = async () => {
+    if (!job) return;
+    if (terminating) return;
+    if (job.cancelRequested) return;
+    if (job.status === 'success' || job.status === 'error') return;
+
+    setTerminating(true);
+    try {
+      const response = await terminateJob(job.id, cursorRef.current);
+      const { logs: nextLogs, nextCursor, ...meta } = response;
+      setJob(meta);
+      if (nextLogs.length > 0) {
+        setLogs((prev) => [...prev, ...nextLogs]);
+      }
+      setCursor(nextCursor);
+      cursorRef.current = nextCursor;
+      setJobError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '终止命令失败';
+      setJobError(message);
+    } finally {
+      setTerminating(false);
+    }
+  };
+
   useEffect(() => {
     if (!job) return;
 
@@ -219,6 +323,16 @@ const App = () => {
 
     return undefined;
   }, [job?.status, job?.actionId]);
+
+  useEffect(() => {
+    if (!job) {
+      setTerminating(false);
+      return;
+    }
+    if (job.status === 'success' || job.status === 'error') {
+      setTerminating(false);
+    }
+  }, [job]);
 
   useEffect(() => {
     if (!job) return;
@@ -284,8 +398,10 @@ const App = () => {
                 owners={ownerOptions}
                 selectedOwners={selectedOwners}
                 onToggleOwner={toggleOwner}
+                onToggleQuickOwner={toggleQuickOwner}
                 onClearOwners={clearOwners}
                 onSelectAll={selectAllOwners}
+                quickOwners={quickOwnerOptions}
                 stories={filteredStories}
                 loading={loadingStories}
                 error={storyError}
@@ -326,6 +442,7 @@ const App = () => {
                         busy={busy}
                         onSelect={handleSelectAction}
                         selected={selectedAction === action.id}
+                        disabled={!hasSelectableStories}
                       />
                     ))}
                   </div>
@@ -339,10 +456,19 @@ const App = () => {
                   onToggleOption={(optionId) => toggleActionOption(selectedActionMeta.id, optionId)}
                   onExecute={() => handleExecute(selectedActionMeta)}
                   busy={busy}
+                  executeDisabled={!hasSelectableStories}
+                  disabledMessage={executeDisabledMessage}
                 />
               ) : null}
 
-              <CommandConsole job={job} logs={logs} error={jobError} />
+              <CommandConsole
+                job={job}
+                logs={logs}
+                error={jobError}
+                onTerminate={handleTerminate}
+                canTerminate={canTerminate}
+                terminatePending={terminatePending}
+              />
 
               <div className="rounded-3xl pixel-frame bg-panel-base/70 backdrop-blur px-6 py-6 space-y-4">
                 <h3 className="font-semibold text-white uppercase tracking-[0.3em] text-xs">提示</h3>

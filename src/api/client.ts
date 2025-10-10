@@ -60,3 +60,10 @@ export async function fetchJob(jobId: string, cursor = 0, signal?: AbortSignal):
 export async function fetchStories(signal?: AbortSignal): Promise<StorySummary[]> {
   return request<StorySummary[]>('/api/stories', { method: 'GET', signal });
 }
+
+export async function terminateJob(jobId: string, cursor = 0): Promise<JobPollResponse> {
+  const search = new URLSearchParams({ cursor: String(cursor) });
+  return request<JobPollResponse>(`/api/jobs/${jobId}/terminate?${search.toString()}`, {
+    method: 'POST',
+  });
+}

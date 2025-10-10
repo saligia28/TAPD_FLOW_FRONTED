@@ -7,12 +7,21 @@ type OwnerOption = {
   count: number;
 };
 
+type QuickOwnerOption = {
+  name: string;
+  count: number;
+  active: boolean;
+  selectedCount: number;
+};
+
 type Props = {
   owners: OwnerOption[];
   selectedOwners: string[];
   onToggleOwner: (owner: string) => void;
+  onToggleQuickOwner: (owner: string) => void;
   onClearOwners: () => void;
   onSelectAll: () => void;
+  quickOwners: QuickOwnerOption[];
   stories: StorySummary[];
   loading: boolean;
   error: string | null;
@@ -22,8 +31,10 @@ const StoryPanel: FC<Props> = ({
   owners,
   selectedOwners,
   onToggleOwner,
+  onToggleQuickOwner,
   onClearOwners,
   onSelectAll,
+  quickOwners,
   stories,
   loading,
   error,
@@ -41,49 +52,75 @@ const StoryPanel: FC<Props> = ({
       </header>
 
       <div className="flex-1 flex flex-col space-y-4 lg:min-h-0">
-        <div className="flex flex-wrap gap-3 items-center">
-          <span className="text-xs uppercase tracking-[0.3em] text-panel-subtle">负责人</span>
-          <div className="flex flex-wrap gap-2">
-            {owners.length === 0 && !loading ? (
-              <span className="text-xs text-panel-subtle/70">未识别到负责人</span>
-            ) : null}
-            {owners.map((option) => {
-              const active = isOwnerSelected(option.name);
-              return (
-                <button
-                  key={option.name}
-                  type="button"
-                  onClick={() => onToggleOwner(option.name)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors pixel-button ${
-                    active
-                      ? 'bg-white text-black'
-                      : 'bg-panel-base/80 text-panel-subtle hover:text-white'
-                  }`}
-                >
-                  {option.name}
-                  <span className="ml-1 text-panel-subtle/70">({option.count})</span>
-                </button>
-              );
-            })}
-          </div>
-          {owners.length > 0 ? (
-            <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                onClick={onSelectAll}
-                className="px-3 py-1.5 rounded-full text-xs text-panel-subtle hover:text-white transition-colors border border-panel-subtle/40"
-              >
-                全选
-              </button>
-              <button
-                type="button"
-                onClick={onClearOwners}
-                className="px-3 py-1.5 rounded-full text-xs text-panel-subtle hover:text-white transition-colors border border-panel-subtle/40"
-              >
-                清空
-              </button>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-xs uppercase tracking-[0.3em] text-panel-subtle">前端</span>
+            <div className="flex flex-wrap gap-2">
+              {quickOwners.map((option) => {
+                const displayCount = option.active ? option.selectedCount : option.count;
+                return (
+                  <button
+                    key={`quick-${option.name}`}
+                    type="button"
+                    onClick={() => onToggleQuickOwner(option.name)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors pixel-button ${
+                      option.active
+                        ? 'bg-white text-black'
+                        : 'bg-panel-base/80 text-panel-subtle hover:text-white'
+                    }`}
+                  >
+                    {option.name}
+                    <span className="ml-1 text-panel-subtle/70">({displayCount})</span>
+                  </button>
+                );
+              })}
             </div>
-          ) : null}
+          </div>
+
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-xs uppercase tracking-[0.3em] text-panel-subtle">负责人</span>
+            <div className="flex flex-wrap gap-2">
+              {owners.length === 0 && !loading ? (
+                <span className="text-xs text-panel-subtle/70">未识别到负责人</span>
+              ) : null}
+              {owners.map((option) => {
+                const active = isOwnerSelected(option.name);
+                return (
+                  <button
+                    key={option.name}
+                    type="button"
+                    onClick={() => onToggleOwner(option.name)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors pixel-button ${
+                      active
+                        ? 'bg-white text-black'
+                        : 'bg-panel-base/80 text-panel-subtle hover:text-white'
+                    }`}
+                  >
+                    {option.name}
+                    <span className="ml-1 text-panel-subtle/70">({option.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            {owners.length > 0 ? (
+              <div className="ml-auto flex gap-2">
+                <button
+                  type="button"
+                  onClick={onSelectAll}
+                  className="px-3 py-1.5 rounded-full text-xs text-panel-subtle hover:text-white transition-colors border border-panel-subtle/40"
+                >
+                  全选
+                </button>
+                <button
+                  type="button"
+                  onClick={onClearOwners}
+                  className="px-3 py-1.5 rounded-full text-xs text-panel-subtle hover:text-white transition-colors border border-panel-subtle/40"
+                >
+                  清空
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex-1 rounded-2xl bg-panel-base/70 border border-panel-card/40 flex flex-col min-h-[18rem] lg:min-h-0">
@@ -141,5 +178,5 @@ const StoryPanel: FC<Props> = ({
   );
 };
 
-export type { OwnerOption };
+export type { OwnerOption, QuickOwnerOption };
 export default StoryPanel;

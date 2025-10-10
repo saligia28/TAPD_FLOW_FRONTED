@@ -6,6 +6,9 @@ type Props = {
   job: JobSnapshot | null;
   logs: JobLogEntry[];
   error: string | null;
+  onTerminate: () => void;
+  canTerminate: boolean;
+  terminatePending: boolean;
 };
 
 const STATUS_META: Record<JobStatus | 'idle', { label: string; className: string }> = {
@@ -35,7 +38,7 @@ const formatTime = (value: string): string => {
   return ts.toLocaleTimeString('zh-CN', { hour12: false });
 };
 
-const CommandConsole: FC<Props> = ({ job, logs, error }) => {
+const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate, terminatePending }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -52,6 +55,8 @@ const CommandConsole: FC<Props> = ({ job, logs, error }) => {
   }, [job]);
 
   const isActive = job?.status === 'pending' || job?.status === 'running';
+  const showTerminate = Boolean(job && (isActive || job.cancelRequested));
+  const terminateDisabled = !canTerminate || terminatePending;
 
   return (
     <div className="rounded-3xl pixel-frame bg-panel-base/75 backdrop-blur px-6 py-6 space-y-5">
@@ -69,13 +74,29 @@ const CommandConsole: FC<Props> = ({ job, logs, error }) => {
             )}
           </p>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.3em] ${meta.className} ${
-            isActive ? 'animate-pulse' : ''
-          }`}
-        >
-          {meta.label}
-        </span>
+        <div className="flex flex-col items-end gap-3">
+          <span
+            className={`px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.3em] ${meta.className} ${
+              isActive ? 'animate-pulse' : ''
+            }`}
+          >
+            {meta.label}
+          </span>
+          {showTerminate ? (
+            <button
+              type="button"
+              onClick={onTerminate}
+              disabled={terminateDisabled}
+              className={`pixel-button rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                terminateDisabled
+                  ? 'bg-rose-500/25 text-rose-200/70 cursor-not-allowed'
+                  : 'bg-rose-500/80 text-white hover:bg-rose-500'
+              }`}
+            >
+              {terminatePending ? '终止中…' : '终止执行'}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="rounded-2xl bg-black/80 border border-panel-card/40">

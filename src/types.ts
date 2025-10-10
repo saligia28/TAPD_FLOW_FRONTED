@@ -36,6 +36,7 @@ export type JobSnapshot = {
   startedAt: string | null;
   finishedAt: string | null;
   exitCode: number | null;
+  cancelRequested: boolean;
 };
 
 export type JobPollResponse = JobSnapshot & {

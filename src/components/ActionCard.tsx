@@ -10,6 +10,7 @@ type Props = {
   busy: boolean;
   onSelect: (action: ActionMeta) => void;
   selected?: boolean;
+  disabled?: boolean;
 };
 
 const labels: Record<ActionState, string> = {
@@ -19,7 +20,7 @@ const labels: Record<ActionState, string> = {
   error: '失败',
 };
 
-const ActionCard: FC<Props> = ({ action, state, busy, onSelect, selected = false }) => {
+const ActionCard: FC<Props> = ({ action, state, busy, onSelect, selected = false, disabled = false }) => {
   const isRunning = state === 'running';
   const isDone = state === 'success';
   const isError = state === 'error';
@@ -28,9 +29,9 @@ const ActionCard: FC<Props> = ({ action, state, busy, onSelect, selected = false
     <button
       type="button"
       onClick={() => onSelect(action)}
-      disabled={busy}
+      disabled={busy || disabled}
       className={`pixel-button rounded-2xl bg-panel-base/80 px-6 py-7 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white hover:bg-panel-card ${
-        busy ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'
+        busy || disabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'
       } ${
         selected ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-panel-base/80' : ''
       }`}
