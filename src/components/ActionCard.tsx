@@ -38,7 +38,7 @@ const ActionCard: FC<Props> = ({ action, state, busy, onSelect, selected = false
     >
       <div className="flex flex-col gap-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm uppercase tracking-[0.2em] text-panel-subtle">{action.id}</span>
+          <span className="text-sm uppercase tracking-[0.2em] text-panel-subtle flex-1">{action.id}</span>
           <span
             className={`text-xs font-semibold ${
               isRunning

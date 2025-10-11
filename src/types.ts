@@ -54,3 +54,22 @@ export type StorySummary = {
   updatedAt?: string | null;
   url?: string | null;
 };
+
+export type StoryOwnerAggregate = {
+  name: string;
+  count: number;
+};
+
+export type StoryQuickOwnerAggregate = {
+  name: string;
+  owners: string[];
+  count: number;
+};
+
+export type StoryCollection = {
+  stories: StorySummary[];
+  total: number;
+  owners: StoryOwnerAggregate[];
+  quickOwners: StoryQuickOwnerAggregate[];
+  truncated: boolean;
+};

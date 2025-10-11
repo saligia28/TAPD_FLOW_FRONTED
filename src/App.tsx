@@ -5,7 +5,7 @@ import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
 import StoryPanel, { type OwnerOption, type QuickOwnerOption } from './components/StoryPanel';
 import { createJob, fetchActions, fetchJob, fetchStories, terminateJob, RequestError } from './api/client';
-import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StorySummary } from './types';
+import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StoryQuickOwnerAggregate, StorySummary } from './types';
 import { usePersistentState } from './hooks/usePersistentState';
 
 const jobStatusToActionState = (status: JobStatus): ActionState => {
@@ -16,6 +16,78 @@ const jobStatusToActionState = (status: JobStatus): ActionState => {
 };
 
 const QUICK_OWNER_SHORTCUTS = ['江林', '喻童', '王荣祥'] as const;
+
+const MAX_LOG_ENTRIES = 2000;
+const LOG_POLL_BASE_INTERVAL_MS = 1500;
+const LOG_POLL_INCREMENT_MS = 1500;
+const LOG_POLL_MAX_INTERVAL_MS = 10000;
+
+const shouldNormalizeLogs = (entries: JobLogEntry[]): boolean => {
+  if (entries.length > MAX_LOG_ENTRIES) return true;
+  const seen = new Set<number>();
+  for (let i = 0; i < entries.length; i += 1) {
+    const seq = entries[i].seq;
+    if (seen.has(seq)) return true;
+    seen.add(seq);
+  }
+  return false;
+};
+
+const normalizeLogs = (entries: JobLogEntry[]): JobLogEntry[] => {
+  if (entries.length === 0 || !shouldNormalizeLogs(entries)) return entries;
+  const seen = new Set<number>();
+  const buffer: JobLogEntry[] = [];
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (seen.has(entry.seq)) continue;
+    seen.add(entry.seq);
+    buffer.push(entry);
+    if (buffer.length === MAX_LOG_ENTRIES) break;
+  }
+  buffer.reverse();
+  return buffer;
+};
+
+const appendLogs = (current: JobLogEntry[], incoming: JobLogEntry[]): JobLogEntry[] => {
+  if (incoming.length === 0) {
+    return current.length > MAX_LOG_ENTRIES ? normalizeLogs(current) : current;
+  }
+
+  if (current.length === 0) {
+    return normalizeLogs(incoming);
+  }
+
+  const maxBaseSize = Math.max(MAX_LOG_ENTRIES - incoming.length, 0);
+  const needsTrim = current.length > maxBaseSize;
+  const base = needsTrim ? current.slice(current.length - maxBaseSize) : current;
+
+  const seen = new Set<number>();
+  let hadDuplicate = needsTrim;
+  base.forEach((entry) => {
+    if (seen.has(entry.seq)) {
+      hadDuplicate = true;
+      return;
+    }
+    seen.add(entry.seq);
+  });
+
+  const additions: JobLogEntry[] = [];
+  incoming.forEach((entry) => {
+    if (seen.has(entry.seq)) {
+      hadDuplicate = true;
+      return;
+    }
+    seen.add(entry.seq);
+    additions.push(entry);
+  });
+
+  if (!hadDuplicate && additions.length === incoming.length && base === current && base.length + additions.length <= MAX_LOG_ENTRIES) {
+    return [...base, ...additions];
+  }
+
+  const next = [...base, ...additions];
+  return next.length > MAX_LOG_ENTRIES || hadDuplicate ? normalizeLogs(next) : next;
+};
 
 const App = () => {
   const [actions, setActions] = useState<ActionMeta[]>([]);
@@ -38,6 +110,7 @@ const App = () => {
   const [logs, setLogs, clearLogs] = usePersistentState<JobLogEntry[]>('workflow:jobLogs', {
     defaultValue: [],
     writeDelayMs: 250,
+    reduceBeforePersist: normalizeLogs,
   });
   const [cursor, setCursor] = usePersistentState<number>('workflow:jobCursor', {
     defaultValue: 0,
@@ -46,6 +119,8 @@ const App = () => {
   const [terminating, setTerminating] = useState(false);
 
   const [stories, setStories] = useState<StorySummary[]>([]);
+  const [ownerOptions, setOwnerOptions] = useState<OwnerOption[]>([]);
+  const [quickOwnerGroups, setQuickOwnerGroups] = useState<StoryQuickOwnerAggregate[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [storyError, setStoryError] = useState<string | null>(null);
   const [selectedOwners, setSelectedOwners] = usePersistentState<string[]>('workflow:selectedOwners', {
@@ -54,6 +129,7 @@ const App = () => {
 
   const cursorRef = useRef(0);
   const jobRef = useRef<JobSnapshot | null>(job);
+  const pollDelayRef = useRef(LOG_POLL_BASE_INTERVAL_MS);
 
   const resetJobState = useCallback(
     (actionId?: string) => {
@@ -76,6 +152,10 @@ const App = () => {
   useEffect(() => {
     jobRef.current = job;
   }, [job]);
+
+  useEffect(() => {
+    setLogs((prev) => normalizeLogs(prev));
+  }, [setLogs]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -133,8 +213,10 @@ const App = () => {
     const controller = new AbortController();
     (async () => {
       try {
-        const data = await fetchStories(controller.signal);
-        setStories(data);
+        const data = await fetchStories({ signal: controller.signal, quick: QUICK_OWNER_SHORTCUTS });
+        setStories(data.stories);
+        setOwnerOptions(data.owners);
+        setQuickOwnerGroups(data.quickOwners);
         setStoryError(null);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -161,31 +243,12 @@ const App = () => {
 
   const terminatePending = terminating || Boolean(job?.cancelRequested);
 
-  const ownerOptions = useMemo<OwnerOption[]>(() => {
-    const counts = new Map<string, number>();
-    stories.forEach((story) => {
-      if (story.owners.length === 0) {
-        counts.set('未指派', (counts.get('未指派') ?? 0) + 1);
-        return;
-      }
-      story.owners.forEach((owner) => {
-        const key = owner.trim();
-        if (!key) return;
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-      });
-    });
-    return Array.from(counts.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh-CN'));
-  }, [stories]);
-
   const quickOwnerMatches = useMemo(() => {
-    const ownerNames = ownerOptions.map((option) => option.name);
-    return QUICK_OWNER_SHORTCUTS.reduce<Record<string, string[]>>((acc, quick) => {
-      acc[quick] = ownerNames.filter((name) => name.includes(quick));
+    return quickOwnerGroups.reduce<Record<string, string[]>>((acc, group) => {
+      acc[group.name] = group.owners;
       return acc;
     }, {});
-  }, [ownerOptions]);
+  }, [quickOwnerGroups]);
 
   useEffect(() => {
     if (loadingStories) return;
@@ -229,25 +292,21 @@ const App = () => {
 
   const quickOwnerOptions = useMemo<QuickOwnerOption[]>(() => {
     const selectedSet = new Set(selectedOwners);
-    return QUICK_OWNER_SHORTCUTS.map((quick) => {
-      const total = stories.reduce((count, story) => {
-        const normalizedOwners = story.owners.map((owner) => owner.trim()).filter(Boolean);
-        return normalizedOwners.some((owner) => owner.includes(quick)) ? count + 1 : count;
-      }, 0);
-      const matches = quickOwnerMatches[quick] ?? [];
+    return quickOwnerGroups.map((group) => {
+      const matches = quickOwnerMatches[group.name] ?? [];
       const active = matches.length > 0 ? matches.every((name) => selectedSet.has(name)) : false;
       const selectedCount = filteredStories.reduce((count, story) => {
-        const normalizedOwners = story.owners.map((owner) => owner.trim()).filter(Boolean);
-        return normalizedOwners.some((owner) => owner.includes(quick)) ? count + 1 : count;
+        const normalizedOwners = story.owners.length > 0 ? story.owners : ['未指派'];
+        return matches.some((name) => normalizedOwners.includes(name)) ? count + 1 : count;
       }, 0);
       return {
-        name: quick,
-        count: total,
+        name: group.name,
+        count: group.count,
         active,
         selectedCount,
       };
     });
-  }, [stories, filteredStories, quickOwnerMatches, selectedOwners]);
+  }, [filteredStories, quickOwnerGroups, quickOwnerMatches, selectedOwners]);
 
   const toggleOwner = (owner: string) => {
     setSelectedOwners((prev) => {
@@ -331,7 +390,7 @@ const App = () => {
       const response = await createJob(action.id, jobOptions);
       const { logs: initialLogs, nextCursor, ...meta } = response;
       setJob(meta);
-      setLogs(initialLogs);
+      setLogs(normalizeLogs(initialLogs));
       setCursor(nextCursor);
       cursorRef.current = nextCursor;
     } catch (error) {
@@ -353,9 +412,7 @@ const App = () => {
       const response = await terminateJob(job.id, cursorRef.current);
       const { logs: nextLogs, nextCursor, ...meta } = response;
       setJob(meta);
-      if (nextLogs.length > 0) {
-        setLogs((prev) => [...prev, ...nextLogs]);
-      }
+      setLogs((prev) => appendLogs(prev, nextLogs));
       setCursor(nextCursor);
       cursorRef.current = nextCursor;
       setJobError(null);
@@ -404,10 +461,18 @@ const App = () => {
     if (job.status === 'success' || job.status === 'error') return;
 
     let cancelled = false;
-    const controller = new AbortController();
+    let timer: number | null = null;
+    let controller: AbortController | null = null;
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      const delay = pollDelayRef.current;
+      timer = window.setTimeout(poll, delay);
+    };
 
     const poll = async () => {
       try {
+        controller = new AbortController();
         const response = await fetchJob(job.id, cursorRef.current, controller.signal);
         if (cancelled) return;
 
@@ -415,7 +480,13 @@ const App = () => {
         setJob((prev) => (prev ? { ...prev, ...meta } : meta));
 
         if (nextLogs.length > 0) {
-          setLogs((prev) => [...prev, ...nextLogs]);
+          setLogs((prev) => appendLogs(prev, nextLogs));
+          pollDelayRef.current = LOG_POLL_BASE_INTERVAL_MS;
+        } else {
+          pollDelayRef.current = Math.min(
+            LOG_POLL_MAX_INTERVAL_MS,
+            pollDelayRef.current + LOG_POLL_INCREMENT_MS,
+          );
         }
 
         setCursor(nextCursor);
@@ -424,32 +495,38 @@ const App = () => {
         if (meta.status === 'success' || meta.status === 'error') {
           cancelled = true;
           controller.abort();
+          return;
         }
+
+        scheduleNext();
       } catch (error) {
         if (cancelled) return;
-        if (controller.signal.aborted) return;
+        if (controller && controller.signal.aborted) return;
         if (error instanceof DOMException && error.name === 'AbortError') return;
         if (error instanceof RequestError && error.status === 404) {
           resetJobState(job.actionId);
           setJobError('未找到命令，可能已完成或被清理。');
           cancelled = true;
-          controller.abort();
+          if (controller) controller.abort();
           return;
         }
         const message = error instanceof Error ? error.message : '轮询失败';
         setJobError(message);
         cancelled = true;
-        controller.abort();
+        if (controller) controller.abort();
       }
+      controller = null;
     };
 
-    const interval = window.setInterval(poll, 1200);
+    pollDelayRef.current = LOG_POLL_BASE_INTERVAL_MS;
     poll();
 
     return () => {
       cancelled = true;
-      controller.abort();
-      window.clearInterval(interval);
+      if (controller) controller.abort();
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
     };
   }, [job?.id, job?.status]);
 

@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef } from 'react';
+import { FC, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { JobLogEntry, JobSnapshot, JobStatus } from '../types';
 
@@ -38,14 +38,15 @@ const formatTime = (value: string): string => {
   return ts.toLocaleTimeString('zh-CN', { hour12: false });
 };
 
+const LOG_CHUNK_SIZE = 200;
+const DEFAULT_VISIBLE_CHUNKS = 2;
+const CHUNK_INCREMENT = 2;
+const BOTTOM_STICKY_THRESHOLD = 32;
+
 const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate, terminatePending }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const node = scrollRef.current;
-    if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [logs, job?.status]);
+  const stickToBottomRef = useRef(true);
+  const [visibleChunks, setVisibleChunks] = useState(DEFAULT_VISIBLE_CHUNKS);
 
   const meta = useMemo(() => {
     if (!job) {
@@ -54,9 +55,53 @@ const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate
     return STATUS_META[job.status];
   }, [job]);
 
+  const totalChunks = Math.max(1, Math.ceil(logs.length / LOG_CHUNK_SIZE));
+  const visibleCount = useMemo(
+    () => Math.min(logs.length, visibleChunks * LOG_CHUNK_SIZE),
+    [logs.length, visibleChunks],
+  );
+  const displayLogs = useMemo(() => {
+    if (visibleCount === logs.length) return logs;
+    return logs.slice(logs.length - visibleCount);
+  }, [logs, visibleCount]);
+
   const isActive = job?.status === 'pending' || job?.status === 'running';
   const showTerminate = Boolean(job && (isActive || job.cancelRequested));
   const terminateDisabled = !canTerminate || terminatePending;
+  const canLoadMore = displayLogs.length < logs.length;
+
+  useEffect(() => {
+    if (logs.length === 0) {
+      setVisibleChunks(DEFAULT_VISIBLE_CHUNKS);
+      stickToBottomRef.current = true;
+      return;
+    }
+    const nextMax = Math.max(DEFAULT_VISIBLE_CHUNKS, totalChunks);
+    setVisibleChunks((prev) => Math.min(prev, nextMax));
+  }, [logs.length, totalChunks]);
+
+  useEffect(() => {
+    setVisibleChunks(DEFAULT_VISIBLE_CHUNKS);
+    stickToBottomRef.current = true;
+  }, [job?.id]);
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    if (!stickToBottomRef.current) return;
+    node.scrollTop = node.scrollHeight;
+  }, [displayLogs, job?.status]);
+
+  const handleScroll = () => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const distanceToBottom = node.scrollHeight - node.clientHeight - node.scrollTop;
+    stickToBottomRef.current = distanceToBottom < BOTTOM_STICKY_THRESHOLD;
+  };
+
+  const handleLoadMore = () => {
+    setVisibleChunks((prev) => Math.min(prev + CHUNK_INCREMENT, totalChunks));
+  };
 
   return (
     <div className="rounded-3xl pixel-frame bg-panel-base/75 backdrop-blur px-6 py-6 space-y-5">
@@ -102,12 +147,23 @@ const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate
       <div className="rounded-2xl bg-black/80 border border-panel-card/40">
         <div
           ref={scrollRef}
+          onScroll={handleScroll}
           className="h-72 overflow-y-auto px-5 py-4 space-y-2 font-mono text-[12px] text-neutral-100"
         >
-          {logs.length === 0 ? (
+          {canLoadMore ? (
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              className="w-full rounded-lg border border-panel-subtle/30 bg-panel-base/40 px-3 py-1 text-xs text-panel-subtle hover:text-panel-subtle/80 transition-colors"
+            >
+              加载更多日志（剩余 {logs.length - displayLogs.length} 条）
+            </button>
+          ) : null}
+
+          {displayLogs.length === 0 ? (
             <p className="text-panel-subtle/80">等待输出…</p>
           ) : (
-            logs.map((log) => (
+            displayLogs.map((log) => (
               <div key={log.seq} className="flex gap-4">
                 <span className="w-20 shrink-0 text-panel-subtle/60">{formatTime(log.timestamp)}</span>
                 <span className="w-16 shrink-0 uppercase tracking-[0.2em] text-panel-subtle/70">

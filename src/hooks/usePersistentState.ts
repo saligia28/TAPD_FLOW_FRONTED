@@ -9,6 +9,8 @@ type UsePersistentStateOptions<T> = {
   serialize?: Serializer<T>;
   deserialize?: Deserializer<T>;
   writeDelayMs?: number;
+  persist?: boolean;
+  reduceBeforePersist?: (value: T) => T;
 };
 
 const safeJsonSerialize = <T,>(value: T): string => JSON.stringify(value);
@@ -18,9 +20,17 @@ const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !=
 
 export function usePersistentState<T>(
   key: string,
-  { defaultValue, storage, serialize = safeJsonSerialize, deserialize = safeJsonDeserialize, writeDelayMs = 0 }: UsePersistentStateOptions<T>,
+  {
+    defaultValue,
+    storage,
+    serialize = safeJsonSerialize,
+    deserialize = safeJsonDeserialize,
+    writeDelayMs = 0,
+    persist = true,
+    reduceBeforePersist,
+  }: UsePersistentStateOptions<T>,
 ) {
-  const resolvedStorage = storage ?? (isBrowser ? window.localStorage : undefined);
+  const resolvedStorage = persist ? storage ?? (isBrowser ? window.localStorage : undefined) : undefined;
   const [state, setState] = useState<T>(() => {
     if (!resolvedStorage) return defaultValue;
     try {
@@ -39,11 +49,12 @@ export function usePersistentState<T>(
   const flush = useCallback(() => {
     if (!resolvedStorage) return;
     try {
-      resolvedStorage.setItem(key, serialize(latestRef.current));
+      const valueToWrite = reduceBeforePersist ? reduceBeforePersist(latestRef.current) : latestRef.current;
+      resolvedStorage.setItem(key, serialize(valueToWrite));
     } catch {
       // ignore quota or serialization errors
     }
-  }, [key, resolvedStorage, serialize]);
+  }, [key, reduceBeforePersist, resolvedStorage, serialize]);
 
   useEffect(() => {
     if (!resolvedStorage) return undefined;
@@ -79,4 +90,3 @@ export function usePersistentState<T>(
 
   return [state, setState, clear] as const;
 }
-
