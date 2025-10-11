@@ -6,6 +6,18 @@ const API_BASE = (import.meta.env.VITE_API_BASE ?? DEFAULT_BASE).replace(/\/$/, 
 
 type RequestOptions = RequestInit & { signal?: AbortSignal };
 
+export class RequestError extends Error {
+  status: number;
+  responseBody: string;
+
+  constructor(status: number, body: string) {
+    super(body || `Request failed with status ${status}`);
+    this.name = 'RequestError';
+    this.status = status;
+    this.responseBody = body;
+  }
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -17,7 +29,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Request failed with status ${response.status}`);
+    throw new RequestError(response.status, text);
   }
 
   return (await response.json()) as T;
@@ -30,6 +42,7 @@ export async function fetchActions(signal?: AbortSignal): Promise<ActionMeta[]> 
 type CreateJobOptions = {
   args?: string[];
   extraArgs?: string[];
+  storyIds?: string[];
 };
 
 export async function createJob(actionId: string, options: CreateJobOptions = {}): Promise<JobPollResponse> {
@@ -41,6 +54,10 @@ export async function createJob(actionId: string, options: CreateJobOptions = {}
 
   if (options.extraArgs !== undefined) {
     payload.extraArgs = options.extraArgs;
+  }
+
+  if (options.storyIds !== undefined) {
+    payload.storyIds = options.storyIds;
   }
 
   return request<JobPollResponse>('/api/jobs', {

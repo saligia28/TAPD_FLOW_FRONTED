@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import ActionCard, { type ActionState } from './components/ActionCard';
 import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
 import StoryPanel, { type OwnerOption, type QuickOwnerOption } from './components/StoryPanel';
-import { createJob, fetchActions, fetchJob, fetchStories, terminateJob } from './api/client';
+import { createJob, fetchActions, fetchJob, fetchStories, terminateJob, RequestError } from './api/client';
 import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StorySummary } from './types';
+import { usePersistentState } from './hooks/usePersistentState';
 
 const jobStatusToActionState = (status: JobStatus): ActionState => {
   if (status === 'success') return 'success';
@@ -19,27 +20,62 @@ const QUICK_OWNER_SHORTCUTS = ['江林', '喻童', '王荣祥'] as const;
 const App = () => {
   const [actions, setActions] = useState<ActionMeta[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, ActionState>>({});
-  const [selectedAction, setSelectedAction] = useState<string | null>(null);
-  const [optionSelections, setOptionSelections] = useState<Record<string, string[]>>({});
+  const [selectedAction, setSelectedAction] = usePersistentState<string | null>('workflow:selectedAction', {
+    defaultValue: null,
+  });
+  const [optionSelections, setOptionSelections] = usePersistentState<Record<string, string[]>>(
+    'workflow:optionSelections',
+    {
+      defaultValue: {},
+    },
+  );
   const [loadingActions, setLoadingActions] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [job, setJob] = useState<JobSnapshot | null>(null);
-  const [logs, setLogs] = useState<JobLogEntry[]>([]);
-  const [cursor, setCursor] = useState(0);
+  const [job, setJob, clearJob] = usePersistentState<JobSnapshot | null>('workflow:jobSnapshot', {
+    defaultValue: null,
+  });
+  const [logs, setLogs, clearLogs] = usePersistentState<JobLogEntry[]>('workflow:jobLogs', {
+    defaultValue: [],
+    writeDelayMs: 250,
+  });
+  const [cursor, setCursor] = usePersistentState<number>('workflow:jobCursor', {
+    defaultValue: 0,
+  });
   const [jobError, setJobError] = useState<string | null>(null);
   const [terminating, setTerminating] = useState(false);
 
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [storyError, setStoryError] = useState<string | null>(null);
-  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [selectedOwners, setSelectedOwners] = usePersistentState<string[]>('workflow:selectedOwners', {
+    defaultValue: [],
+  });
 
   const cursorRef = useRef(0);
+  const jobRef = useRef<JobSnapshot | null>(job);
+
+  const resetJobState = useCallback(
+    (actionId?: string) => {
+      clearJob();
+      clearLogs();
+      setCursor(0);
+      cursorRef.current = 0;
+      setTerminating(false);
+      if (actionId) {
+        setStatusMap((prev) => ({ ...prev, [actionId]: 'idle' }));
+      }
+    },
+    [clearJob, clearLogs, setCursor, setStatusMap, setTerminating],
+  );
 
   useEffect(() => {
     cursorRef.current = cursor;
   }, [cursor]);
+
+  useEffect(() => {
+    jobRef.current = job;
+  }, [job]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,6 +106,17 @@ const App = () => {
             return acc;
           }, {}),
         );
+        setSelectedAction((prev) => {
+          if (!prev) return prev;
+          return data.some((action) => action.id === prev) ? prev : null;
+        });
+        const persistedJob = jobRef.current;
+        if (persistedJob) {
+          setStatusMap((prev) => ({
+            ...prev,
+            [persistedJob.actionId]: jobStatusToActionState(persistedJob.status),
+          }));
+        }
         setActionError(null);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -114,8 +161,6 @@ const App = () => {
 
   const terminatePending = terminating || Boolean(job?.cancelRequested);
 
-  const hasSelectedOwners = selectedOwners.length > 0;
-
   const ownerOptions = useMemo<OwnerOption[]>(() => {
     const counts = new Map<string, number>();
     stories.forEach((story) => {
@@ -143,8 +188,14 @@ const App = () => {
   }, [ownerOptions]);
 
   useEffect(() => {
-    setSelectedOwners((prev) => prev.filter((owner) => ownerOptions.some((option) => option.name === owner)));
-  }, [ownerOptions]);
+    if (loadingStories) return;
+    if (ownerOptions.length === 0) return;
+    setSelectedOwners((prev) => {
+      const validOwners = new Set(ownerOptions.map((option) => option.name));
+      const filtered = prev.filter((owner) => validOwners.has(owner));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [loadingStories, ownerOptions, setSelectedOwners]);
 
   const filteredStories = useMemo(() => {
     const selectedOwnerSet = selectedOwners.length > 0 ? new Set(selectedOwners) : null;
@@ -162,16 +213,19 @@ const App = () => {
     });
   }, [stories, selectedOwners]);
 
-  const hasSelectableStories = hasSelectedOwners && filteredStories.length > 0;
+  const selectedStoryIds = useMemo(() => filteredStories.map((story) => story.id), [filteredStories]);
+  const hasSelectedOwners = selectedOwners.length > 0;
+  const hasSelectableStories = selectedStoryIds.length > 0;
+  const canExecuteActions = hasSelectedOwners && hasSelectableStories;
   const executeDisabledMessage = useMemo(() => {
     if (!hasSelectedOwners) {
       return '请选择需要处理的需求负责人后再执行命令。';
     }
-    if (filteredStories.length === 0) {
+    if (!hasSelectableStories) {
       return '当前筛选没有需求命中，无法执行命令。';
     }
     return null;
-  }, [hasSelectedOwners, filteredStories.length]);
+  }, [hasSelectedOwners, hasSelectableStories]);
 
   const quickOwnerOptions = useMemo<QuickOwnerOption[]>(() => {
     const selectedSet = new Set(selectedOwners);
@@ -249,7 +303,7 @@ const App = () => {
 
   const handleExecute = async (action: ActionMeta) => {
     if (busy) return;
-    if (!hasSelectableStories) return;
+    if (!canExecuteActions) return;
 
     setSelectedAction(action.id);
     setJobError(null);
@@ -261,14 +315,20 @@ const App = () => {
     setStatusMap((prev) => ({ ...prev, [action.id]: 'running' }));
 
     const selectedOptionIds = new Set(optionSelections[action.id] ?? []);
-      const optionArgs = action.options
+    const optionArgs = action.options
       .filter((option) => selectedOptionIds.has(option.id))
       .flatMap((option) => option.args);
-    const ownerArgs = selectedOwners.length > 0 ? ['--owner', selectedOwners.join(',')] : [];
+    const requiresStoryIds = action.id === 'pull-to-notion' || action.id === 'update-requirements';
+    const ownerArgs =
+      requiresStoryIds || selectedOwners.length === 0 ? [] : ['--owner', selectedOwners.join(',')];
     const baseArgs = [...action.defaultArgs, ...optionArgs, ...ownerArgs];
+    const jobOptions =
+      requiresStoryIds && selectedStoryIds.length > 0
+        ? { args: baseArgs, storyIds: selectedStoryIds }
+        : { args: baseArgs };
 
     try {
-      const response = await createJob(action.id, { args: baseArgs });
+      const response = await createJob(action.id, jobOptions);
       const { logs: initialLogs, nextCursor, ...meta } = response;
       setJob(meta);
       setLogs(initialLogs);
@@ -300,8 +360,13 @@ const App = () => {
       cursorRef.current = nextCursor;
       setJobError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '终止命令失败';
-      setJobError(message);
+      if (error instanceof RequestError && error.status === 404) {
+        resetJobState(job.actionId);
+        setJobError('命令已不存在，已清理本地状态。');
+      } else {
+        const message = error instanceof Error ? error.message : '终止命令失败';
+        setJobError(message);
+      }
     } finally {
       setTerminating(false);
     }
@@ -364,6 +429,13 @@ const App = () => {
         if (cancelled) return;
         if (controller.signal.aborted) return;
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (error instanceof RequestError && error.status === 404) {
+          resetJobState(job.actionId);
+          setJobError('未找到命令，可能已完成或被清理。');
+          cancelled = true;
+          controller.abort();
+          return;
+        }
         const message = error instanceof Error ? error.message : '轮询失败';
         setJobError(message);
         cancelled = true;
@@ -456,7 +528,7 @@ const App = () => {
                   onToggleOption={(optionId) => toggleActionOption(selectedActionMeta.id, optionId)}
                   onExecute={() => handleExecute(selectedActionMeta)}
                   busy={busy}
-                  executeDisabled={!hasSelectableStories}
+                  executeDisabled={!canExecuteActions}
                   disabledMessage={executeDisabledMessage}
                 />
               ) : null}

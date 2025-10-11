@@ -61,7 +61,7 @@ const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate
   return (
     <div className="rounded-3xl pixel-frame bg-panel-base/75 backdrop-blur px-6 py-6 space-y-5">
       <header className="flex items-start justify-between gap-4">
-        <div>
+        <div className="flex-1">
           <p className="font-pixel text-[11px] uppercase tracking-[0.35em] text-panel-subtle">console</p>
           <h3 className="mt-3 text-lg font-semibold text-white">
             {job ? job.title : '等待执行'}
@@ -70,11 +70,11 @@ const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate
             {job ? (
               <span className="block max-w-full whitespace-pre-wrap break-all pr-1">{job.displayCommand}</span>
             ) : (
-              '选择左侧的操作以查看实时日志输出。'
+              '执行操作以查看实时日志输出。'
             )}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-3">
+        <div className="flex flex-col items-end gap-3 ">
           <span
             className={`px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.3em] ${meta.className} ${
               isActive ? 'animate-pulse' : ''

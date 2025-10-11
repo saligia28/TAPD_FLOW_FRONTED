@@ -48,12 +48,13 @@ const ActionOptionsPanel: FC<Props> = ({
                 key={option.id}
                 type="button"
                 onClick={() => onToggleOption(option.id)}
+                disabled={busy}
                 title={option.description}
                 className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
                   selected
                     ? 'bg-white/15 border-white/50 text-white shadow-sm'
                     : 'bg-transparent border-white/15 text-panel-subtle hover:border-white/30'
-                }`}
+                } ${busy ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {option.label}
               </button>
