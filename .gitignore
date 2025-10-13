@@ -71,3 +71,9 @@ Thumbs.db
 connect.lock
 coverage-final.json
 web_modules/
+
+# AI Config
+CLAUDE.md
+AGENTS.md
+.claude/
+.codex/
