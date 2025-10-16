@@ -169,7 +169,7 @@ const CommandConsole: FC<Props> = ({ job, logs, error, onTerminate, canTerminate
                 <span className="w-16 shrink-0 uppercase tracking-[0.2em] text-panel-subtle/70">
                   {log.stream}
                 </span>
-                <span className={`whitespace-pre-wrap break-words ${streamClassName(log.stream)}`}>
+                <span className={`whitespace-pre-wrap break-all ${streamClassName(log.stream)}`}>
                   {log.text || ' '}
                 </span>
               </div>
