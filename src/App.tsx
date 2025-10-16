@@ -377,14 +377,16 @@ const App = () => {
     const optionArgs = action.options
       .filter((option) => selectedOptionIds.has(option.id))
       .flatMap((option) => option.args);
-    const requiresStoryIds = action.id === 'pull-to-notion' || action.id === 'update-requirements';
+    const storyIdActions = new Set(['pull-to-notion', 'update-requirements', 'debug-notion']);
+    const needsStoryIds = storyIdActions.has(action.id);
+    const allowOwnerArgs = action.id !== 'debug-notion';
     const ownerArgs =
-      requiresStoryIds || selectedOwners.length === 0 ? [] : ['--owner', selectedOwners.join(',')];
+      allowOwnerArgs && selectedOwners.length > 0 && (!needsStoryIds || selectedStoryIds.length === 0)
+        ? ['--owner', selectedOwners.join(',')]
+        : [];
     const baseArgs = [...action.defaultArgs, ...optionArgs, ...ownerArgs];
     const jobOptions =
-      requiresStoryIds && selectedStoryIds.length > 0
-        ? { args: baseArgs, storyIds: selectedStoryIds }
-        : { args: baseArgs };
+      needsStoryIds && selectedStoryIds.length > 0 ? { args: baseArgs, storyIds: selectedStoryIds } : { args: baseArgs };
 
     try {
       const response = await createJob(action.id, jobOptions);
