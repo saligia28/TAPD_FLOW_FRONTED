@@ -241,7 +241,7 @@ const App = () => {
     return job.status === 'pending' || job.status === 'running';
   }, [job, terminating]);
 
-  const terminatePending = terminating || Boolean(job?.cancelRequested);
+  const terminatePending = terminating || (Boolean(job?.cancelRequested) && (job?.status === 'pending' || job?.status === 'running'));
 
   const quickOwnerMatches = useMemo(() => {
     return quickOwnerGroups.reduce<Record<string, string[]>>((acc, group) => {
@@ -418,6 +418,8 @@ const App = () => {
       setCursor(nextCursor);
       cursorRef.current = nextCursor;
       setJobError(null);
+      // 重置轮询间隔，加快终止后的状态检测
+      pollDelayRef.current = LOG_POLL_BASE_INTERVAL_MS;
     } catch (error) {
       if (error instanceof RequestError && error.status === 404) {
         resetJobState(job.actionId);
