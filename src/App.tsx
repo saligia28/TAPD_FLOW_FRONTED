@@ -269,8 +269,8 @@ const App = () => {
       const owners =
         story.owners.length > 0
           ? story.owners
-              .map((owner) => owner.trim())
-              .filter((owner) => owner.length > 0)
+            .map((owner) => owner.trim())
+            .filter((owner) => owner.length > 0)
           : ['未指派'];
       return owners.some((owner) => selectedOwnerSet.has(owner));
     });
@@ -542,11 +542,15 @@ const App = () => {
   const selectedOptionIds = selectedActionMeta ? optionSelections[selectedActionMeta.id] ?? [] : [];
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 px-4 sm:px-6 py-10 lg:py-14">
-      <div className="w-full flex flex-col gap-8 lg:gap-10">
-        <div className="flex flex-col lg:flex-row lg:items-stretch gap-8 lg:gap-10 lg:min-h-0">
-          <div className="flex-1 min-w-0 lg:min-h-0 lg:max-h-[90vh] lg:overflow-auto">
-            <div className="h-full lg:px-1 lg:py-1">
+    <div className="h-screen bg-hacker-bg text-hacker-text-main font-mono p-4 sm:p-6 lg:p-8 selection:bg-hacker-primary selection:text-black overflow-hidden flex flex-col">
+      <div className="w-full max-w-[1600px] mx-auto flex-1 min-h-0 flex flex-col gap-8">
+        <div className="flex flex-col lg:flex-row lg:items-stretch gap-8 h-full">
+          {/* Left Panel: Story List */}
+          <div className="flex-1 min-w-0 lg:flex-[0.8] flex flex-col h-full overflow-hidden">
+            <div className="h-full hacker-border bg-hacker-panel p-4 relative group flex flex-col overflow-hidden">
+              <div className="absolute top-0 left-0 bg-hacker-primary/20 text-hacker-primary text-[10px] px-2 py-0.5 transform -translate-y-full">
+                SYSTEM.DATA_STREAM
+              </div>
               <StoryPanel
                 owners={ownerOptions}
                 selectedOwners={selectedOwners}
@@ -562,31 +566,47 @@ const App = () => {
             </div>
           </div>
 
-          <section className="flex-1 min-w-0 flex flex-col rounded-3xl bg-panel-card/80 backdrop-blur pixel-frame px-7 py-9 lg:min-h-0 lg:max-h-[90vh] lg:overflow-auto">
-            <header className="space-y-4">
-              <p className="text-xs uppercase tracking-[0.35em] text-panel-subtle">tapd • notion • qa</p>
-              <h1 className="text-3xl md:text-[34px] font-semibold leading-snug text-white">
-                日常流程，一键到位
-              </h1>
-              <p className="text-sm text-panel-subtle leading-relaxed max-w-xl clamp-3">
-                选定下方操作后可先配置参数，再执行脚本；右侧实时展示执行日志与状态。
-              </p>
-            </header>
+          {/* Right Panel: Main Control */}
+          <section className="flex-1 min-w-0 flex flex-col hacker-border bg-hacker-panel p-6 relative h-full overflow-hidden">
+            <div className="absolute top-0 right-0 bg-hacker-primary/20 text-hacker-primary text-[10px] px-2 py-0.5 transform -translate-y-full">
+              MAIN_CONTROL_UNIT
+            </div>
 
-            <div className="mt-6 flex-1 flex flex-col gap-6 lg:min-h-0">
-              <div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-6">
+              <header className="space-y-4 border-b border-hacker-border pb-6 shrink-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-hacker-primary tracking-[0.2em] animate-pulse">
+                    TAPD • NOTION • QA_LINK
+                  </p>
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-hacker-alert animate-pulse"></div>
+                    <div className="w-3 h-3 rounded-full bg-hacker-secondary"></div>
+                    <div className="w-3 h-3 rounded-full bg-hacker-primary"></div>
+                  </div>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-white uppercase tracking-tighter text-glow">
+                  Workflow_Automator<span className="animate-pulse">_</span>
+                </h1>
+                <p className="text-sm text-hacker-text-dim max-w-xl font-hacker">
+                  &gt;&gt; Initialize sequence. Select parameters. Execute.
+                  <br />
+                  &gt;&gt; Monitoring system status...
+                </p>
+              </header>
+
+              <div className="shrink-0">
                 {loadingActions ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     {[0, 1, 2, 3].map((item) => (
-                      <div key={item} className="h-40 rounded-2xl bg-panel-base/50 animate-pulse" />
+                      <div key={item} className="h-32 border border-hacker-border bg-hacker-bg/50 animate-pulse" />
                     ))}
                   </div>
                 ) : actionError ? (
-                  <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-6 text-sm text-rose-200">
-                    {actionError}
+                  <div className="border border-hacker-alert/50 bg-hacker-alert/10 p-6 text-sm text-hacker-alert font-bold">
+                    [ERROR] {actionError}
                   </div>
                 ) : (
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     {actions.map((action) => (
                       <ActionCard
                         key={action.id}
@@ -603,34 +623,37 @@ const App = () => {
               </div>
 
               {selectedActionMeta ? (
-                <ActionOptionsPanel
-                  action={selectedActionMeta}
-                  selectedOptionIds={selectedOptionIds}
-                  onToggleOption={(optionId) => toggleActionOption(selectedActionMeta.id, optionId)}
-                  onExecute={() => handleExecute(selectedActionMeta)}
-                  busy={busy}
-                  executeDisabled={!canExecuteActions}
-                  disabledMessage={executeDisabledMessage}
-                />
+                <div className="shrink-0">
+                  <ActionOptionsPanel
+                    action={selectedActionMeta}
+                    selectedOptionIds={selectedOptionIds}
+                    onToggleOption={(optionId) => toggleActionOption(selectedActionMeta.id, optionId)}
+                    onExecute={() => handleExecute(selectedActionMeta)}
+                    busy={busy}
+                    executeDisabled={!canExecuteActions}
+                    disabledMessage={executeDisabledMessage}
+                  />
+                </div>
               ) : null}
 
-              <CommandConsole
-                job={job}
-                logs={logs}
-                error={jobError}
-                onTerminate={handleTerminate}
-                canTerminate={canTerminate}
-                terminatePending={terminatePending}
-              />
+              <div className="shrink-0">
+                <CommandConsole
+                  job={job}
+                  logs={logs}
+                  error={jobError}
+                  onTerminate={handleTerminate}
+                  canTerminate={canTerminate}
+                  terminatePending={terminatePending}
+                />
+              </div>
 
-              <div className="rounded-3xl pixel-frame bg-panel-base/70 backdrop-blur px-6 py-6 space-y-4">
-                <h3 className="font-semibold text-white uppercase tracking-[0.3em] text-xs">提示</h3>
-                <p className="text-sm text-panel-subtle leading-relaxed">
-                  运行前请确保在 TAPD 项目内启动 FastAPI 服务，例如：
-                  <span className="block font-mono text-xs mt-2">uvicorn src.server:app --reload</span>
+              <div className="border border-hacker-border bg-hacker-bg/50 p-4 text-xs text-hacker-text-dim font-hacker shrink-0">
+                <h3 className="text-hacker-primary mb-2 uppercase">[System_Notice]</h3>
+                <p className="mb-1">
+                  &gt; Ensure FastAPI service is running: <span className="text-hacker-text-code">uvicorn src.server:app --reload</span>
                 </p>
-                <p className="text-sm text-panel-subtle leading-relaxed">
-                  如需联网执行或写入 Notion，请提前完成配置并确认相关凭证。
+                <p>
+                  &gt; Verify network connection for Notion API integration.
                 </p>
               </div>
             </div>

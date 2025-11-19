@@ -30,43 +30,52 @@ const ActionCard: FC<Props> = ({ action, state, busy, onSelect, selected = false
       type="button"
       onClick={() => onSelect(action)}
       disabled={busy || disabled}
-      className={`pixel-button rounded-2xl bg-panel-base/80 px-6 py-7 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white hover:bg-panel-card ${
-        busy || disabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'
-      } ${
-        selected ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-panel-base/80' : ''
-      }`}
+      className={`group relative w-full text-left transition-all duration-200 ${busy || disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:transform hover:translate-x-1'
+        }`}
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm uppercase tracking-[0.2em] text-panel-subtle flex-1">{action.id}</span>
-          <span
-            className={`text-xs font-semibold ${
-              isRunning
-                ? 'text-white'
-                : isDone
-                  ? 'text-emerald-400'
-                  : isError
-                    ? 'text-rose-400'
-                    : 'text-panel-subtle'
-            }`}
-          >
-            {labels[state]}
-          </span>
+      <div
+        className={`h-full border p-5 transition-all duration-200 ${selected
+            ? 'border-hacker-primary bg-hacker-primary/10 shadow-neon'
+            : 'border-hacker-border bg-hacker-panel hover:border-hacker-primary/50'
+          }`}
+      >
+        {/* Corner accents */}
+        <div className={`absolute top-0 left-0 w-2 h-2 border-t border-l transition-colors duration-200 ${selected ? 'border-hacker-primary' : 'border-hacker-border group-hover:border-hacker-primary'}`} />
+        <div className={`absolute top-0 right-0 w-2 h-2 border-t border-r transition-colors duration-200 ${selected ? 'border-hacker-primary' : 'border-hacker-border group-hover:border-hacker-primary'}`} />
+        <div className={`absolute bottom-0 left-0 w-2 h-2 border-b border-l transition-colors duration-200 ${selected ? 'border-hacker-primary' : 'border-hacker-border group-hover:border-hacker-primary'}`} />
+        <div className={`absolute bottom-0 right-0 w-2 h-2 border-b border-r transition-colors duration-200 ${selected ? 'border-hacker-primary' : 'border-hacker-border group-hover:border-hacker-primary'}`} />
+
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center border-b border-hacker-border/50 pb-2 mb-1">
+            <span className="text-xs font-mono text-hacker-text-dim flex-1">ID: {action.id}</span>
+            <span
+              className={`text-xs font-bold uppercase tracking-wider ${isRunning
+                  ? 'text-hacker-primary animate-pulse'
+                  : isDone
+                    ? 'text-hacker-primary'
+                    : isError
+                      ? 'text-hacker-alert'
+                      : 'text-hacker-text-dim'
+                }`}
+            >
+              [{labels[state]}]
+            </span>
+          </div>
+          <h2 className={`text-lg font-bold tracking-tight clamp-2 leading-snug break-words ${selected ? 'text-hacker-primary text-glow' : 'text-hacker-text-main group-hover:text-white'}`}>
+            {action.title}
+          </h2>
+          <p className="text-sm text-hacker-text-dim leading-relaxed clamp-3 font-mono">{action.description}</p>
+          {action.commandPreview ? (
+            <code className="block max-w-full font-mono text-xs text-hacker-text-code bg-black/50 border border-hacker-border/50 rounded px-3 py-2 whitespace-pre-wrap break-all">
+              &gt; {action.commandPreview}
+            </code>
+          ) : null}
+          {action.hint ? (
+            <p className="text-[10px] uppercase tracking-widest text-hacker-text-dim/60 overflow-hidden text-ellipsis whitespace-nowrap">
+              // {action.hint}
+            </p>
+          ) : null}
         </div>
-        <h2 className="text-lg font-semibold tracking-tight text-white clamp-2 leading-snug break-words">
-          {action.title}
-        </h2>
-        <p className="text-sm text-panel-subtle leading-relaxed clamp-3">{action.description}</p>
-        {action.commandPreview ? (
-          <code className="block max-w-full font-mono text-xs text-panel-subtle/70 bg-panel-base/70 rounded-lg px-3 py-2 whitespace-pre-wrap break-all">
-            {action.commandPreview}
-          </code>
-        ) : null}
-        {action.hint ? (
-          <p className="text-[11px] uppercase tracking-[0.25em] text-panel-subtle/60 overflow-hidden text-ellipsis whitespace-nowrap">
-            {action.hint}
-          </p>
-        ) : null}
       </div>
     </button>
   );

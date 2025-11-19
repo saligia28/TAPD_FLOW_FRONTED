@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,26 +6,92 @@
 
 :root {
   color-scheme: dark;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 body {
   margin: 0;
-  background: #111111;
+  background: #050505;
+  color: #e0e0e0;
+  overflow-x: hidden;
 }
 
-.pixel-frame {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 4px 4px 0 0 rgba(255, 255, 255, 0.2);
+/* CRT Scanline Effect */
+/* CRT Scanline Effect */
+body::after {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 50;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  user-select: none;
 }
 
-.pixel-button {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
-  transition: transform 120ms ease, box-shadow 120ms ease;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.pixel-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border: 1px solid #00ff41;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff41;
+  box-shadow: 0 0 5px #00ff41;
+}
+
+.hacker-border {
+  border: 1px solid #333;
+  position: relative;
+}
+
+.hacker-border::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid #00ff41;
+  border-left: 2px solid #00ff41;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.hacker-border::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-bottom: 2px solid #00ff41;
+  border-right: 2px solid #00ff41;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.hacker-border:hover::before,
+.hacker-border:hover::after {
+  width: 100%;
+  height: 100%;
+}
+
+.text-glow {
+  text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
 }
 
 .clamp-2 {
