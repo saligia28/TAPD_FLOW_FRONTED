@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 
 import type { StorySummary } from '../types';
+import AIImplementButton from './AIImplementButton';
 
 type OwnerOption = {
   name: string;
@@ -25,6 +26,7 @@ type Props = {
   stories: StorySummary[];
   loading: boolean;
   error: string | null;
+  onAIImplement: (story: StorySummary) => void;
 };
 
 const StoryPanel: FC<Props> = ({
@@ -38,6 +40,7 @@ const StoryPanel: FC<Props> = ({
   stories,
   loading,
   error,
+  onAIImplement,
 }) => {
   const isOwnerSelected = (owner: string) => selectedOwners.includes(owner);
 
@@ -169,9 +172,12 @@ const StoryPanel: FC<Props> = ({
                       <p className="text-hacker-text-main font-bold break-words flex-1 group-hover:text-hacker-primary transition-colors">
                         &gt; {story.title}
                       </p>
-                      <span className="text-hacker-text-dim whitespace-nowrap opacity-50 group-hover:opacity-100">
-                        [{story.status || 'UNKNOWN'}]
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <AIImplementButton story={story} onTrigger={onAIImplement} />
+                        <span className="text-hacker-text-dim whitespace-nowrap opacity-50 group-hover:opacity-100">
+                          [{story.status || 'UNKNOWN'}]
+                        </span>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-hacker-text-dim/70">
                       <span>OWNER: {ownersLabel}</span>

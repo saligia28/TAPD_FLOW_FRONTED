@@ -1,0 +1,139 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36" version="27.1.6">
+  <diagram name="Workflow Frontend Architecture" id="workflow-frontend">
+    <mxGraphModel dx="2066" dy="1150" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Workflow Frontend - 项目结构详情" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="600" y="20" width="400" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="app-container" value="App.tsx (根组件)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="50" y="60" width="1530" height="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="state-section" value="状态管理层 (State Management)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="80" y="140" width="700" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="persistent-state" value="持久化状态 (usePersistentState)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="100" y="180" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="state-1" value="• selectedAction: string | null&#xa;• optionSelections: Record&lt;string, string[]&gt;&#xa;• jobSnapshot: JobSnapshot | null&#xa;• jobLogs: JobLogEntry[]&#xa;• jobCursor: number&#xa;• selectedOwners: string[]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="110" y="210" width="300" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="local-state" value="本地状态 (useState)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="440" y="180" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="state-2" value="• actions: ActionMeta[]&#xa;• statusMap: Record&lt;string, ActionState&gt;&#xa;• stories: StorySummary[]&#xa;• ownerOptions: OwnerOption[]&#xa;• quickOwnerGroups: StoryQuickOwnerAggregate[]&#xa;• loadingActions/Stories: boolean&#xa;• jobError/actionError/storyError: string | null&#xa;• terminating: boolean" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="210" width="300" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="api-section" value="API 通信层 (src/api/client.ts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="820" y="140" width="720" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="api-methods" value="API 方法" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="840" y="180" width="340" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="api-list" value="• fetchActions(): ActionMeta[]&#xa;  GET /api/actions&#xa;&#xa;• fetchStories(options): StoryCollection&#xa;  GET /api/stories?quick=...&amp;limit=...&#xa;&#xa;• createJob(actionId, options): JobPollResponse&#xa;  POST /api/jobs&#xa;&#xa;• fetchJob(jobId, cursor): JobPollResponse&#xa;  GET /api/jobs/{jobId}?cursor=...&#xa;&#xa;• terminateJob(jobId, cursor): JobPollResponse&#xa;  POST /api/jobs/{jobId}/terminate" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="850" y="210" width="320" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="api-config" value="配置" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="1200" y="180" width="320" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="api-config-text" value="• Base URL: VITE_API_BASE&#xa;  默认: http://127.0.0.1:8000&#xa;&#xa;• RequestError 自定义错误类&#xa;  - status: HTTP 状态码&#xa;  - responseBody: 响应体&#xa;&#xa;• 所有方法支持 AbortSignal&#xa;  用于请求取消" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1210" y="210" width="300" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="components-section" value="组件层 (src/components/)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="80" y="460" width="1460" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="story-panel" value="StoryPanel.tsx" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="100" y="500" width="340" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="story-panel-content" value="需求列表面板 (左侧)&#xa;&#xa;功能:&#xa;• 显示需求列表&#xa;• 负责人筛选&#xa;• 快捷负责人组 (江林/喻童/王荣祥)&#xa;• 负责人计数徽章&#xa;• 需求卡片链接到 TAPD&#xa;&#xa;Props:&#xa;• owners: OwnerOption[]&#xa;• selectedOwners: string[]&#xa;• quickOwners: QuickOwnerOption[]&#xa;• stories: StorySummary[]&#xa;• loading/error: boolean/string&#xa;• onToggleOwner/onToggleQuickOwner&#xa;• onClearOwners/onSelectAll" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="110" y="530" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="action-card" value="ActionCard.tsx" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="460" y="500" width="340" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="action-card-content" value="操作卡片组件&#xa;&#xa;功能:&#xa;• 显示操作按钮&#xa;• 状态指示器 (idle/running/success/error)&#xa;• 动画效果 (旋转/成功/失败)&#xa;• 自动重置 (1.6秒后)&#xa;&#xa;Props:&#xa;• action: ActionMeta&#xa;• state: ActionState&#xa;• busy: boolean&#xa;• selected: boolean&#xa;• disabled: boolean&#xa;• onSelect: (action) =&gt; void&#xa;&#xa;状态映射:&#xa;• pending/running → running (旋转)&#xa;• success → success (绿色勾)&#xa;• error → error (红色X)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="470" y="530" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="action-options" value="ActionOptionsPanel.tsx" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="820" y="500" width="340" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="action-options-content" value="操作选项面板&#xa;&#xa;功能:&#xa;• 动态渲染选项复选框&#xa;• 执行按钮&#xa;• 禁用状态提示&#xa;&#xa;Props:&#xa;• action: ActionMeta&#xa;• selectedOptionIds: string[]&#xa;• onToggleOption: (optionId) =&gt; void&#xa;• onExecute: () =&gt; void&#xa;• busy: boolean&#xa;• executeDisabled: boolean&#xa;• disabledMessage: string | null&#xa;&#xa;禁用消息:&#xa;• &quot;请选择需要处理的需求负责人后再执行命令&quot;&#xa;• &quot;当前筛选没有需求命中，无法执行命令&quot;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="830" y="530" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="command-console" value="CommandConsole.tsx" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="1180" y="500" width="340" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="command-console-content" value="命令控制台&#xa;&#xa;功能:&#xa;• 实时日志显示&#xa;• 流式样式 (stdout/stderr/system)&#xa;• 终止按钮&#xa;• 自动滚动到底部&#xa;• 日志持久化&#xa;&#xa;Props:&#xa;• job: JobSnapshot | null&#xa;• logs: JobLogEntry[]&#xa;• error: string | null&#xa;• onTerminate: () =&gt; void&#xa;• canTerminate: boolean&#xa;• terminatePending: boolean&#xa;&#xa;显示条件:&#xa;• 终止按钮仅在 pending/running 时显示&#xa;• 且未请求取消时可用" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1190" y="530" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="logic-section" value="核心逻辑层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="90" y="840" width="690" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="job-lifecycle" value="任务生命周期管理" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="100" y="880" width="320" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="job-lifecycle-content" value="handleExecute():&#xa;• 构建命令参数&#xa;• 创建任务 (createJob)&#xa;• 更新状态为 running&#xa;• 开始日志轮询&#xa;&#xa;日志轮询机制:&#xa;• 初始间隔: 1.5秒&#xa;• 有新日志: 重置为 1.5秒&#xa;• 无新日志: 递增 1.5秒&#xa;• 最大间隔: 10秒&#xa;• 终止条件: success/error&#xa;&#xa;handleTerminate():&#xa;• 请求任务取消&#xa;• 获取最新日志&#xa;• 重置轮询间隔&#xa;&#xa;resetJobState():&#xa;• 清理任务快照&#xa;• 清理日志&#xa;• 重置游标" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="110" y="910" width="280" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="log-management" value="日志管理" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="440" y="880" width="320" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="log-management-content" value="appendLogs():&#xa;• 合并新旧日志&#xa;• 按 seq 去重&#xa;• 保留最近 2000 条&#xa;&#xa;normalizeLogs():&#xa;• 检测重复&#xa;• 倒序遍历保留最新&#xa;• 限制数量&#xa;&#xa;shouldNormalizeLogs():&#xa;• 检查是否超过限制&#xa;• 检查是否有重复&#xa;&#xa;日志结构:&#xa;• seq: 序列号 (去重键)&#xa;• timestamp: ISO 8601&#xa;• stream: stdout/stderr/system&#xa;• text: 日志内容" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="450" y="910" width="280" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="types-section" value="类型定义层 (src/types.ts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="820" y="840" width="720" height="390" as="geometry" />
+        </mxCell>
+        <mxCell id="core-types" value="核心类型" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="840" y="880" width="340" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="core-types-content" value="JobStatus:&#xa;• &#39;pending&#39; | &#39;running&#39; | &#39;success&#39; | &#39;error&#39;&#xa;&#xa;JobSnapshot:&#xa;• id, actionId, title, status&#xa;• command, displayCommand&#xa;• createdAt, startedAt, finishedAt&#xa;• exitCode, cancelRequested&#xa;&#xa;JobLogEntry:&#xa;• seq, timestamp, stream, text&#xa;&#xa;JobPollResponse:&#xa;• JobSnapshot + logs + nextCursor&#xa;&#xa;ActionMeta:&#xa;• id, title, description, hint&#xa;• defaultArgs, commandPreview&#xa;• options: ActionOptionMeta[]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="850" y="910" width="300" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="story-types" value="需求相关类型" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="1200" y="880" width="310" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="story-types-content" value="StorySummary:&#xa;• id, title, status&#xa;• owners: string[]&#xa;• frontend, iteration&#xa;• updatedAt, url&#xa;&#xa;StoryOwnerAggregate:&#xa;• name, count&#xa;&#xa;StoryQuickOwnerAggregate:&#xa;• name, owners: string[], count&#xa;&#xa;StoryCollection:&#xa;• stories: StorySummary[]&#xa;• total, truncated&#xa;• owners: StoryOwnerAggregate[]&#xa;• quickOwners: StoryQuickOwnerAggregate[]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1210" y="910" width="290" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#666666;" parent="1" source="state-section" target="components-section" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1-label" value="Props 传递" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1" parent="arrow1" vertex="1" connectable="0">
+          <mxGeometry x="-0.2" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#b85450;dashed=1;" parent="1" source="logic-section" target="state-section" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow2-label" value="状态更新" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1" parent="arrow2" vertex="1" connectable="0">
+          <mxGeometry x="-0.2" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#d79b00;" parent="1" source="api-section" target="state-section" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3-label" value="API 响应" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1" parent="arrow3" vertex="1" connectable="0">
+          <mxGeometry x="-0.2" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#82b366;dashed=1;" parent="1" source="logic-section" target="types-section" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4-label" value="类型约束" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1" parent="arrow4" vertex="1" connectable="0">
+          <mxGeometry x="-0.2" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -4,7 +4,8 @@ import ActionCard, { type ActionState } from './components/ActionCard';
 import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
 import StoryPanel, { type OwnerOption, type QuickOwnerOption } from './components/StoryPanel';
-import { createJob, fetchActions, fetchJob, fetchStories, terminateJob, RequestError } from './api/client';
+import AIImplementModal from './components/AIImplementModal';
+import { createJob, fetchActions, fetchJob, fetchStories, terminateJob, triggerAIImplement, RequestError } from './api/client';
 import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StoryQuickOwnerAggregate, StorySummary } from './types';
 import { usePersistentState } from './hooks/usePersistentState';
 
@@ -126,6 +127,10 @@ const App = () => {
   const [selectedOwners, setSelectedOwners] = usePersistentState<string[]>('workflow:selectedOwners', {
     defaultValue: [],
   });
+
+  const [aiModalStory, setAiModalStory] = useState<StorySummary | null>(null);
+  const [aiSubmitting, setAiSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const cursorRef = useRef(0);
   const jobRef = useRef<JobSnapshot | null>(job);
@@ -433,6 +438,49 @@ const App = () => {
     }
   };
 
+  const handleAIImplement = (story: StorySummary) => {
+    setAiModalStory(story);
+  };
+
+  const handleAIModalClose = () => {
+    setAiModalStory(null);
+    setAiSubmitting(false);
+  };
+
+  const handleAIModalSubmit = async (data: {
+    terminalType: 'claude' | 'codex';
+    workingDirectory: string;
+    promptText: string;
+  }) => {
+    if (!aiModalStory) return;
+
+    setAiSubmitting(true);
+    try {
+      const response = await triggerAIImplement({
+        terminalType: data.terminalType,
+        workingDirectory: data.workingDirectory,
+        promptText: data.promptText,
+        storyId: aiModalStory.id,
+        storyTitle: aiModalStory.title,
+      });
+
+      setToastMessage(response.message || '终端已启动，正在执行AI实现...');
+      handleAIModalClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'AI实现触发失败';
+      setToastMessage(`错误: ${message}`);
+    } finally {
+      setAiSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
   useEffect(() => {
     if (!job) return;
 
@@ -562,6 +610,7 @@ const App = () => {
                 stories={filteredStories}
                 loading={loadingStories}
                 error={storyError}
+                onAIImplement={handleAIImplement}
               />
             </div>
           </div>
@@ -660,6 +709,21 @@ const App = () => {
           </section>
         </div>
       </div>
+
+      {aiModalStory && (
+        <AIImplementModal
+          story={aiModalStory}
+          onClose={handleAIModalClose}
+          onSubmit={handleAIModalSubmit}
+          isSubmitting={aiSubmitting}
+        />
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-hacker-panel border border-hacker-primary px-6 py-3 text-sm text-hacker-text-main font-mono z-50 animate-pulse">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 };

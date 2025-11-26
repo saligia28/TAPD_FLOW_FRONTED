@@ -1,4 +1,4 @@
-import type { ActionMeta, JobPollResponse, StoryCollection } from '../types';
+import type { ActionMeta, AIImplementRequest, AIImplementResponse, JobPollResponse, StoryCollection } from '../types';
 
 const DEFAULT_BASE = 'http://127.0.0.1:8000';
 
@@ -104,4 +104,32 @@ export async function terminateJob(jobId: string, cursor = 0): Promise<JobPollRe
   return request<JobPollResponse>(`/api/jobs/${jobId}/terminate?${search.toString()}`, {
     method: 'POST',
   });
+}
+
+export async function triggerAIImplement(req: AIImplementRequest): Promise<AIImplementResponse> {
+  const response = await fetch('/node-api/run', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      cmd: req.terminalType,
+      args: ['chat'],
+      cwd: req.workingDirectory,
+      openInTerminal: true,
+      initialMessage: req.promptText,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new RequestError(response.status, text);
+  }
+
+  const data = await response.json();
+  return {
+    success: true,
+    message: '终端已启动，正在执行AI实现...',
+    sessionId: data.id,
+  };
 }

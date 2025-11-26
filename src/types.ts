@@ -73,3 +73,17 @@ export type StoryCollection = {
   quickOwners: StoryQuickOwnerAggregate[];
   truncated: boolean;
 };
+
+export type AIImplementRequest = {
+  terminalType: 'claude' | 'codex';
+  workingDirectory: string;
+  promptText: string;
+  storyId: string;
+  storyTitle: string;
+};
+
+export type AIImplementResponse = {
+  success: boolean;
+  message: string;
+  sessionId?: string;
+};
