@@ -5,8 +5,9 @@ import ActionOptionsPanel from './components/ActionOptionsPanel';
 import CommandConsole from './components/CommandConsole';
 import StoryPanel, { type OwnerOption, type QuickOwnerOption } from './components/StoryPanel';
 import AIImplementModal from './components/AIImplementModal';
+import PathConfigModal from './components/PathConfigModal';
 import { createJob, fetchActions, fetchJob, fetchStories, terminateJob, triggerAIImplement, RequestError } from './api/client';
-import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StoryQuickOwnerAggregate, StorySummary } from './types';
+import type { ActionMeta, JobLogEntry, JobSnapshot, JobStatus, StoryQuickOwnerAggregate, StorySummary, PathConfig } from './types';
 import { usePersistentState } from './hooks/usePersistentState';
 
 const jobStatusToActionState = (status: JobStatus): ActionState => {
@@ -131,6 +132,11 @@ const App = () => {
   const [aiModalStory, setAiModalStory] = useState<StorySummary | null>(null);
   const [aiSubmitting, setAiSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [pathConfigs, setPathConfigs] = usePersistentState<PathConfig[]>('workflow:pathConfigs', {
+    defaultValue: [],
+  });
+  const [showPathConfig, setShowPathConfig] = useState(false);
 
   const cursorRef = useRef(0);
   const jobRef = useRef<JobSnapshot | null>(job);
@@ -627,10 +633,19 @@ const App = () => {
                   <p className="text-xs text-hacker-primary tracking-[0.2em] animate-pulse">
                     TAPD • NOTION • QA_LINK
                   </p>
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-hacker-alert animate-pulse"></div>
-                    <div className="w-3 h-3 rounded-full bg-hacker-secondary"></div>
-                    <div className="w-3 h-3 rounded-full bg-hacker-primary"></div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowPathConfig(true)}
+                      className="px-2 py-1 text-[10px] uppercase tracking-wider border border-hacker-border text-hacker-text-dim hover:text-hacker-primary hover:border-hacker-primary transition-colors"
+                      title="配置工作目录路径"
+                    >
+                      [配置]
+                    </button>
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-hacker-alert animate-pulse"></div>
+                      <div className="w-3 h-3 rounded-full bg-hacker-secondary"></div>
+                      <div className="w-3 h-3 rounded-full bg-hacker-primary"></div>
+                    </div>
                   </div>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white uppercase tracking-tighter text-glow">
@@ -716,6 +731,16 @@ const App = () => {
           onClose={handleAIModalClose}
           onSubmit={handleAIModalSubmit}
           isSubmitting={aiSubmitting}
+          pathConfigs={pathConfigs}
+        />
+      )}
+
+      {showPathConfig && (
+        <PathConfigModal
+          paths={pathConfigs}
+          onClose={() => setShowPathConfig(false)}
+          onSave={setPathConfigs}
+          onError={setToastMessage}
         />
       )}
 

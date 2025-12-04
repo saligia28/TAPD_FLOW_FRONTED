@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState } from 'react';
-import type { StorySummary } from '../types';
+import type { StorySummary, PathConfig } from '../types';
 
 type Props = {
   story: StorySummary;
@@ -11,16 +11,18 @@ type Props = {
     promptText: string;
   }) => void;
   isSubmitting: boolean;
+  pathConfigs: PathConfig[];
 };
 
-const AIImplementModal: FC<Props> = ({ story, onClose, onSubmit, isSubmitting }) => {
+const AIImplementModal: FC<Props> = ({ story, onClose, onSubmit, isSubmitting, pathConfigs }) => {
   const [terminalType, setTerminalType] = useState<'claude' | 'codex'>('claude');
-  const [workingDirectory, setWorkingDirectory] = useState('');
+  const [workingDirectory, setWorkingDirectory] = useState(pathConfigs.length > 0 ? pathConfigs[0].path : '');
   const [promptText, setPromptText] = useState(
     `从Notion的TAPD需求中找到需求[${story.title}],分析并实现,有不清晰的地方可以告诉我,我给你补充完整`
   );
 
   const isValid = terminalType && workingDirectory.trim().startsWith('/') && promptText.trim();
+  const hasConfigs = pathConfigs.length > 0;
 
   const handleSubmit = () => {
     if (!isValid || isSubmitting) return;
@@ -76,15 +78,35 @@ const AIImplementModal: FC<Props> = ({ story, onClose, onSubmit, isSubmitting })
             <label className="text-[10px] text-hacker-text-main uppercase">
               工作目录 <span className="text-hacker-alert">*</span>
             </label>
-            <input
-              type="text"
-              value={workingDirectory}
-              onChange={(e) => setWorkingDirectory(e.target.value)}
-              placeholder="/path/to/project"
-              className="w-full bg-black/40 border border-hacker-border px-2 py-1.5 text-xs text-hacker-text-main focus:border-hacker-primary focus:outline-none"
-            />
+            {hasConfigs ? (
+              <div className="flex flex-wrap gap-3">
+                {pathConfigs.map((config) => (
+                  <label key={config.id} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      value={config.path}
+                      checked={workingDirectory === config.path}
+                      onChange={(e) => setWorkingDirectory(e.target.value)}
+                      className="accent-hacker-primary"
+                    />
+                    <span className="text-xs text-hacker-text-dim">{config.label}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={workingDirectory}
+                onChange={(e) => setWorkingDirectory(e.target.value)}
+                placeholder="/path/to/project"
+                className="w-full bg-black/40 border border-hacker-border px-2 py-1.5 text-xs text-hacker-text-main focus:border-hacker-primary focus:outline-none"
+              />
+            )}
             {workingDirectory && !workingDirectory.trim().startsWith('/') && (
               <p className="text-[9px] text-hacker-alert">必须是绝对路径（以/开头）</p>
+            )}
+            {!hasConfigs && (
+              <p className="text-[9px] text-hacker-text-dim">提示: 可在右上角配置按钮中预设路径</p>
             )}
           </div>
 

@@ -87,3 +87,9 @@ export type AIImplementResponse = {
   message: string;
   sessionId?: string;
 };
+
+export type PathConfig = {
+  id: string;
+  label: string;
+  path: string;
+};
