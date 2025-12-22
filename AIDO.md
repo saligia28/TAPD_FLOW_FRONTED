@@ -80,7 +80,7 @@ Modify story card layout to include AIImplementButton before status field:
 - Validate working directory exists
 - Spawn terminal process (iTerm2/Terminal.app on macOS)
 - Execute appropriate CLI command:
-  - Claude: `claude chat "${promptText}"`
+  - Claude: `claude "${promptText}"`
   - Codex: `codex "${promptText}"`
 - Set working directory via `cd` command
 - Return immediately after spawning (non-blocking)

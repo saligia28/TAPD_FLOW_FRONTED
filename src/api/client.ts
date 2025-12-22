@@ -107,6 +107,7 @@ export async function terminateJob(jobId: string, cursor = 0): Promise<JobPollRe
 }
 
 export async function triggerAIImplement(req: AIImplementRequest): Promise<AIImplementResponse> {
+  const args: string[] = [];
   const response = await fetch('/node-api/run', {
     method: 'POST',
     headers: {
@@ -114,7 +115,7 @@ export async function triggerAIImplement(req: AIImplementRequest): Promise<AIImp
     },
     body: JSON.stringify({
       cmd: req.terminalType,
-      args: ['chat'],
+      args,
       cwd: req.workingDirectory,
       openInTerminal: true,
       initialMessage: req.promptText,

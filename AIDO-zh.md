@@ -89,7 +89,7 @@
 - 验证工作目录是否存在
 - 生成终端进程（macOS上的iTerm2/Terminal.app）
 - 执行相应的CLI命令：
-  - Claude: `claude chat "${promptText}"`
+  - Claude: `claude "${promptText}"`
   - Codex: `codex "${promptText}"`
 - 通过`cd`命令设置工作目录
 - 生成后立即返回（非阻塞）
